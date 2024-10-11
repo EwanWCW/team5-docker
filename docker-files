@@ -1,0 +1,101 @@
+=======
+db.df 
+=======
+
+FROM mysql
+ENV MYSQL_DATABASE priar
+COPY ./createtables.sql /docker-entrypoint-initdb.d/
+COPY ./insertvalues.sql /docker-entrypoint-initdb.d/
+
+============
+frontend.df
+============
+FROM ubuntu
+RUN apt update -y
+RUN apt install apache2 -y
+ENV DEBIAN_FRONTEND noninteractive
+ENV DEBCONF_NONINTERACTIVE_SEEN true
+RUN apt install sudo php php-mysql libapache2-mod-php -y
+CMD ["apache2ctl", "-D", "FOREGROUND"]
+
+==========
+index.php
+==========
+<?php
+$servername = "database";
+$username = "root";
+$password = "123";
+$dbname = "priar";
+
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
+// Check connection
+if ($conn->connect_error) {
+  die("Connection failed: " . $conn->connect_error);
+}
+
+$sql = "SELECT firstname, rollnumber FROM priarworld";
+$result = $conn->query($sql);
+
+if ($result->num_rows > 0) {
+  // output data of each row
+  while($row = $result->fetch_assoc()) {
+    echo " - Name: " . $row["firstname"]. " " . $row["rollnumber"]. "<br>";
+  }
+} else {
+  echo "0 results";
+}
+$conn->close();
+?>
+
+==========
+createtables.sql
+==========
+CREATE TABLE priarworld ( firstname varchar(20), rollnumber int(5));
+CREATE TABLE team5 ( firstname varchar(20), rollnumber int(5));
+CREATE TABLE foods ( food varchar(20), rollnumber int(5));
+
+==========
+insetvalues.sql
+==========
+INSERT INTO priarworld (firstname, rollnumber) VALUES ('Pushpak',1);
+INSERT INTO priarworld (firstname, rollnumber) VALUES ('Nayan',2);
+INSERT INTO priarworld (firstname, rollnumber) VALUES ('Chait',3);
+INSERT INTO priarworld (firstname, rollnumber) VALUES ('Rutuja',4);
+INSERT INTO priarworld (firstname, rollnumber) VALUES ('Tanmay',5);
+
+INSERT INTO team5 (firstname, rollnumber) VALUES ('Ewan',1);
+INSERT INTO team5 (firstname, rollnumber) VALUES ('John',2);
+INSERT INTO team5 (firstname, rollnumber) VALUES ('Paul',3);
+INSERT INTO team5 (firstname, rollnumber) VALUES ('Remi',4);
+
+INSERT INTO foods (food, rollnumber) VALUES ('pizza',1);
+INSERT INTO foods (food, rollnumber) VALUES ('chicken',2);
+INSERT INTO foods (food, rollnumber) VALUES ('beef',3);
+INSERT INTO foods (food, rollnumber) VALUES ('chocolate',4);
+
+
+==========
+docker.sh
+==========
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl -y 
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+sudo echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+
+# install docker-compose
+sudo curl -SL https://github.com/docker/compose/releases/download/v2.29.6/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+sudo chmod a+x /usr/local/bin/docker-compose
+sudo cp /usr/local/bin/docker-compose /usr/bin/docker-compose
+
